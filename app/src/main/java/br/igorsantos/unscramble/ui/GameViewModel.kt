@@ -1,5 +1,7 @@
 package br.igorsantos.unscramble.ui
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import br.igorsantos.unscramble.MAX_NO_OF_WORDS
 import br.igorsantos.unscramble.SCORE_INCREASE
@@ -10,14 +12,14 @@ import br.igorsantos.unscramble.allWordLists
  */
 class GameViewModel : ViewModel() {
 
-    private lateinit var _currentScrambleWord: String
-    val currentScrambleWord: String get() = _currentScrambleWord
+    private val _currentScrambleWord = MutableLiveData<String>()
+    val currentScrambleWord: LiveData<String> get() = _currentScrambleWord
 
-    private var _currentWordCount = 0
-    val currenWordCount: Int get() = _currentWordCount
+    private val _currentWordCount = MutableLiveData(0)
+    val currenWordCount: LiveData<Int> get() = _currentWordCount
 
-    private var _score = 0
-    val score: Int get() = _score
+    private val _score = MutableLiveData(0)
+    val score: LiveData<Int> get() = _score
 
     private var wordList: MutableList<String> = mutableListOf()
     private lateinit var currentWord: String
@@ -36,21 +38,21 @@ class GameViewModel : ViewModel() {
         if(wordList.contains(currentWord)){
             getNextWord()
         }else{
-            _currentScrambleWord = String(tempWord)
-            ++_currentWordCount
+            _currentScrambleWord.value = String(tempWord)
+            _currentWordCount.value = (_currentWordCount.value)?.inc()
             wordList.add(currentWord)
         }
     }
 
     fun nextWord(): Boolean{
-        return if(_currentWordCount < MAX_NO_OF_WORDS){
+        return if(_currentWordCount.value!! < MAX_NO_OF_WORDS){
             getNextWord()
             true
         } else false
     }
 
     private fun increaseScore(){
-        _score += SCORE_INCREASE
+        _score.value = (_score.value)?.plus(SCORE_INCREASE)
     }
 
     fun isUserWordCorrect(playWord: String): Boolean{
@@ -62,8 +64,8 @@ class GameViewModel : ViewModel() {
     }
 
     fun reinitializeData(){
-        _score = 0
-        _currentWordCount = 0
+        _score.value = 0
+        _currentWordCount.value = 0
         wordList.clear()
         getNextWord()
     }

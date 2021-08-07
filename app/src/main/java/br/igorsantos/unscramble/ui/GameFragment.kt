@@ -5,11 +5,11 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import br.igorsantos.unscramble.MAX_NO_OF_WORDS
 import br.igorsantos.unscramble.R
-import br.igorsantos.unscramble.SCORE_INCREASE
 import br.igorsantos.unscramble.allWordLists
 import br.igorsantos.unscramble.databinding.FragmentGameBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -28,7 +28,7 @@ class GameFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        binding = FragmentGameBinding.inflate(inflater, container, false)
+        binding = DataBindingUtil.inflate(inflater, R.layout.fragment_game, container, false)
 
         Log.d("GameFragment", "Word: ${viewModel.currentScrambleWord} " +
         "Score: ${viewModel.score} " + "WordCount: ${viewModel.currenWordCount}")
@@ -39,14 +39,26 @@ class GameFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        //Initialize varibles dataBinding
+        binding.gameViewModel = viewModel
+        binding.maxNoOfWords = MAX_NO_OF_WORDS
+        binding.lifecycleOwner = viewLifecycleOwner
+
         //setup clickListener
         binding.submit.setOnClickListener   { onSubmitWord() }
         binding.skip.setOnClickListener     { onSkipWord()   }
 
         //update UI
-        updateNextWordOnScreen()
-        binding.score.text = getString(R.string.score, 0)
-        binding.wordCount.text = getString(R.string.word_count, 0, MAX_NO_OF_WORDS)
+        //Observables
+        /*viewModel.score.observe(viewLifecycleOwner, { newScore ->
+            binding.score.text = getString(R.string.score, newScore)
+        })
+        viewModel.currenWordCount.observe(viewLifecycleOwner, { newWordCount ->
+            binding.wordCount.text = getString(R.string.word_count, newWordCount, MAX_NO_OF_WORDS)
+        })
+        viewModel.currentScrambleWord.observe(viewLifecycleOwner, { newWord ->
+            binding.textViewUnscrambledWord.text = newWord
+        })*/
     }
 
     private fun onSubmitWord(){
@@ -54,11 +66,7 @@ class GameFragment : Fragment() {
 
         if(viewModel.isUserWordCorrect(playerWord)) {
             setErrorTextField(false)
-            if (viewModel.nextWord()) {
-                updateNextWordOnScreen()
-            } else {
-                showFinalScoreDialog()
-            }
+            if (!viewModel.nextWord()) showFinalScoreDialog()
         }else{
             setErrorTextField(true)
         }
@@ -67,22 +75,14 @@ class GameFragment : Fragment() {
     private fun onSkipWord(){
         if(viewModel.nextWord()){
             setErrorTextField(false)
-            updateNextWordOnScreen()
         }else{
             showFinalScoreDialog()
         }
     }
 
-    private fun getNextScrambleWord(): String{
-        val tempWord = allWordLists.random().toCharArray()
-        tempWord.shuffle()
-        return String(tempWord)
-    }
-
     private fun restartGame(){
         viewModel.reinitializeData()
         setErrorTextField(true)
-        updateNextWordOnScreen()
     }
 
     private fun exitGame(){
@@ -99,14 +99,10 @@ class GameFragment : Fragment() {
         }
     }
 
-    private fun updateNextWordOnScreen(){
-        binding.textViewUnscrambledWord.text = viewModel.currentScrambleWord
-    }
-
     private fun showFinalScoreDialog(){
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(getString(R.string.congratulations))
-            .setMessage(getString(R.string.score, viewModel.score))
+            .setMessage(getString(R.string.score, viewModel.score.value))
             .setCancelable(false)
             .setPositiveButton(getString(R.string.play_again)) { _, _ -> restartGame() }
             .setNegativeButton(getString(R.string.exit)) { _, _ -> exitGame() }
